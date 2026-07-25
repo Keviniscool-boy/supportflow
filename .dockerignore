@@ -1,0 +1,13 @@
+.git
+.github
+backend/.env*
+frontend
+docs
+examples
+scripts
+data
+storage
+backups
+logs
+node_modules
+*.log

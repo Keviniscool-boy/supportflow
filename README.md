@@ -59,7 +59,7 @@ docs/API.md
 | [数据库设计](docs/Database.md) | 计划中（草案） |
 | [API 设计](docs/API.md) | 计划中（草案） |
 | 开发任务拆分 | v1.0 评审版 |
-| 部署指南 | 计划中 |
+| [部署指南](docs/Deployment.md) | 进行中（Lite 草案） |
 
 ## 🛣️ 版本路线图
 

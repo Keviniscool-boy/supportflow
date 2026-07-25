@@ -8,6 +8,6 @@
 | [API.md](API.md) | REST、SSE、错误码和幂等契约 | 计划中（草案） |
 | `Development.md` | 开发任务拆分和工程约定 | v1.0 评审版 |
 | `Roadmap.md` | 详细版本路线图 | 计划中 |
-| `Deployment.md` | Docker Compose 部署与运维 | 计划中 |
+| [Deployment.md](Deployment.md) | Docker Compose 部署与运维 | 进行中（Lite 草案） |
 
 已确认的 PRD 是产品范围基线。技术架构、数据库、API 和后续开发任务不得静默扩大 v0.2 验收范围。

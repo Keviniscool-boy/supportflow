@@ -142,7 +142,7 @@ test(tool): cover permission failures
 | `T-002` | 配置与环境 Profile | T-001 | Development/Lite/Production-like 配置分层；密钥只来自环境或 Secret Reference | 已完成 |
 | `T-003` | PostgreSQL Migration Runner | T-001、T-002 | 顺序 Migration、版本表、失败停止、空库可初始化 | 进行中 |
 | `T-004` | v0.2 Database Schema 与 Seed | T-003 | 按 [Database](./Database.md) 建立表、索引、枚举、默认 Tenant 和 NovaTech Seed | 待开始 |
-| `T-005` | Docker Compose Lite | T-002、T-003 | PostgreSQL + pgvector、Redis、App、Local Object Volume 可启动；不暴露内部端口 | 待开始 |
+| `T-005` | Docker Compose Lite | T-002、T-003 | PostgreSQL + pgvector、Redis、App、Local Object Volume 可启动；不暴露内部端口 | 进行中 |
 | `T-006` | HTTP 基础中间件 | T-001、T-002 | Request ID、JSON 错误 Envelope、Content-Type、Body 限制、稳定错误码 | 已完成 |
 | `T-007` | Session 与 CSRF 基础 | T-002、T-006 | Demo Cookie、CSRF、过期/撤销、同源 CORS 和安全 Cookie 属性 | 待开始 |
 | `T-008` | 日志与 OpenTelemetry 接入边界 | T-001、T-006 | `slog` 输出 stdout；敏感字段脱敏；Trace 与系统日志不混表 | 待开始 |

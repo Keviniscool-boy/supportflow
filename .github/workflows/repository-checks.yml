@@ -32,6 +32,7 @@ jobs:
             docs/Database.md
             docs/API.md
             docs/Development.md
+            docs/Deployment.md
           )
           for path in "${required[@]}"; do
             test -f "$path" || { echo "缺少必要文件: $path"; exit 1; }
@@ -59,3 +60,6 @@ jobs:
         run: |
           go vet ./...
           go test ./...
+
+      - name: 校验 Lite Compose
+        run: docker compose --env-file deploy/.env.example -f deploy/docker-compose.yml config --quiet
