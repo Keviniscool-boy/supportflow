@@ -141,7 +141,7 @@ test(tool): cover permission failures
 | `T-001` | Go 模块与目录骨架 | 无 | Go 1.24+ 模块、模块边界、基础 `go test ./...` 可执行 | 已完成 |
 | `T-002` | 配置与环境 Profile | T-001 | Development/Lite/Production-like 配置分层；密钥只来自环境或 Secret Reference | 已完成 |
 | `T-003` | PostgreSQL Migration Runner | T-001、T-002 | 顺序 Migration、版本表、失败停止、空库可初始化 | 已完成 |
-| `T-004` | v0.2 Database Schema 与 Seed | T-003 | 按 [Database](./Database.md) 建立表、索引、枚举、默认 Tenant 和 NovaTech Seed | 待开始 |
+| `T-004` | v0.2 Database Schema 与 Seed | T-003 | 按 [Database](./Database.md) 建立表、索引、枚举、默认 Tenant 和 NovaTech Seed | 已完成 |
 | `T-005` | Docker Compose Lite | T-002、T-003 | PostgreSQL + pgvector、Redis、App、Local Object Volume 可启动；不暴露内部端口 | 已完成 |
 | `T-006` | HTTP 基础中间件 | T-001、T-002 | Request ID、JSON 错误 Envelope、Content-Type、Body 限制、稳定错误码 | 已完成 |
 | `T-007` | Session 与 CSRF 基础 | T-002、T-006 | Demo Cookie、CSRF、过期/撤销、同源 CORS 和安全 Cookie 属性 | 待开始 |
