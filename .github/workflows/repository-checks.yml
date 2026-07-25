@@ -41,7 +41,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if git ls-files | grep -E '(^|/)(\.env($|\.)|data/|storage/|backups/)|\.(pem|key)$'; then
+          sensitive_paths="$(git ls-files | grep -E '(^|/)(\.env($|\.)|data/|storage/|backups/)|\.(pem|key)$' | grep -vE '(^|/)\.env\.example$' || true)"
+          if [[ -n "$sensitive_paths" ]]; then
+            echo "$sensitive_paths"
             echo "仓库中包含密钥或运行时数据路径。"
             exit 1
           fi
+
+      - name: 配置 Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: 检查并测试后端
+        working-directory: backend
+        run: |
+          go vet ./...
+          go test ./...
