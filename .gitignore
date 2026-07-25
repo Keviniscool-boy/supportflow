@@ -1,0 +1,38 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Go
+.gocache/
+*.test
+*.out
+coverage/
+
+# Node.js
+node_modules/
+frontend/dist/
+.npm/
+.pnpm-store/
+
+# Build output
+bin/
+dist/
+tmp/
+.cache/
+
+# Runtime data
+data/
+storage/
+backups/
+logs/
+*.log
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini

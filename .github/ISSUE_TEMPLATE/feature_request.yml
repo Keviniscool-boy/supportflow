@@ -1,0 +1,42 @@
+name: Feature request
+description: Propose a user problem or product improvement.
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please focus on the user problem before proposing an implementation. v0.2 scope is intentionally constrained.
+  - type: checkboxes
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and the roadmap.
+          required: true
+  - type: textarea
+    attributes:
+      label: User problem
+      description: Who has the problem, in what situation, and why does it matter?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Proposed outcome
+      description: Describe the desired behavior without assuming a specific implementation.
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Suggested target
+      options:
+        - v0.2 SupportFlow MVP
+        - v0.3 Enterprise Foundation
+        - Future roadmap
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Alternatives and trade-offs
+      description: Describe alternatives, constraints, or compatibility concerns.
