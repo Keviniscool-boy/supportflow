@@ -72,6 +72,7 @@ services:
       SUPPORTFLOW_MODEL_MODE: ${SUPPORTFLOW_MODEL_MODE:-mock}
       SUPPORTFLOW_ALLOWED_ORIGIN: ${SUPPORTFLOW_ALLOWED_ORIGIN:-}
       SUPPORTFLOW_SESSION_TTL: ${SUPPORTFLOW_SESSION_TTL:-30m}
+      SUPPORTFLOW_COOKIE_SECURE: ${SUPPORTFLOW_COOKIE_SECURE:-false}
     volumes:
       - object_data:/var/lib/supportflow/storage
     ports:
