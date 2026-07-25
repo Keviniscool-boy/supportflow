@@ -43,7 +43,7 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile
     restart: "no"
-    command: ["/usr/local/bin/supportflow-migrate"]
+    entrypoint: ["/usr/local/bin/supportflow-migrate"]
     environment:
       SUPPORTFLOW_ENV: ${SUPPORTFLOW_ENV:-lite}
       SUPPORTFLOW_DATABASE_URL: postgres://${POSTGRES_USER:-supportflow}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-supportflow}?sslmode=disable
