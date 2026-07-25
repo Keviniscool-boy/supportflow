@@ -1,13 +1,13 @@
-# SupportFlow Documentation
+# SupportFlow 项目文档
 
-| Document | Purpose | Status |
+| 文档 | 用途 | 状态 |
 | --- | --- | --- |
-| [PRD.md](PRD.md) | Product scope, requirements, acceptance, and roadmap | v1.1 accepted |
-| [Architecture.md](Architecture.md) | System architecture and Lite deployment boundaries | v1.0 review baseline |
-| `Database.md` | Data model, constraints, and indexes | Next stage |
-| `API.md` | REST, SSE, errors, and idempotency contracts | Planned |
-| `Roadmap.md` | Detailed release plan | Planned |
-| `Development.md` | Local development and engineering conventions | Planned |
-| `Deployment.md` | Docker Compose deployment and operations | Planned |
+| [PRD.md](PRD.md) | 产品范围、需求、验收标准和版本边界 | v1.1 已确认 |
+| [Architecture.md](Architecture.md) | 系统架构和 Lite 部署边界 | v1.0 评审基线 |
+| [Database.md](Database.md) | 数据模型、约束、索引和事务边界 | 计划中（草案） |
+| [API.md](API.md) | REST、SSE、错误码和幂等契约 | 计划中（草案） |
+| `Development.md` | 开发任务拆分和工程约定 | v1.0 评审版 |
+| `Roadmap.md` | 详细版本路线图 | 计划中 |
+| `Deployment.md` | Docker Compose 部署与运维 | 计划中 |
 
-The accepted PRD is the product scope baseline. Architecture and subsequent design documents must not silently expand v0.2 acceptance scope.
+已确认的 PRD 是产品范围基线。技术架构、数据库、API 和后续开发任务不得静默扩大 v0.2 验收范围。

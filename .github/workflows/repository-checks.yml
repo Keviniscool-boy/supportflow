@@ -1,4 +1,4 @@
-name: Repository checks
+name: 仓库检查
 
 on:
   push:
@@ -13,10 +13,10 @@ jobs:
   repository:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: 检出仓库
         uses: actions/checkout@v4
 
-      - name: Verify required files
+      - name: 检查必要文件
         shell: bash
         run: |
           set -euo pipefail
@@ -29,16 +29,19 @@ jobs:
             CHANGELOG.md
             docs/PRD.md
             docs/Architecture.md
+            docs/Database.md
+            docs/API.md
+            docs/Development.md
           )
           for path in "${required[@]}"; do
-            test -f "$path" || { echo "Missing required file: $path"; exit 1; }
+            test -f "$path" || { echo "缺少必要文件: $path"; exit 1; }
           done
 
-      - name: Reject committed secrets and runtime data
+      - name: 拒绝密钥和运行时数据
         shell: bash
         run: |
           set -euo pipefail
           if git ls-files | grep -E '(^|/)(\.env($|\.)|data/|storage/|backups/)|\.(pem|key)$'; then
-            echo "A secret or runtime-data path is tracked."
+            echo "仓库中包含密钥或运行时数据路径。"
             exit 1
           fi

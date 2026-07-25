@@ -1,31 +1,31 @@
-# Security Policy
+# 安全政策
 
-## Project Status
+## 项目状态
 
-SupportFlow is in the design and MVP development stage. No release is currently supported for production use, and the project does not claim any industry compliance certification.
+SupportFlow 当前处于设计与 MVP 开发阶段，尚无可用于生产环境的受支持版本，也不声明具备任何行业合规认证。
 
-| Version | Supported |
+| 版本 | 支持范围 |
 | --- | --- |
-| `main` | Best effort |
-| `< 1.0` | No production security support |
+| `main` | 尽力支持 |
+| `< 1.0` | 不提供生产级安全支持 |
 
-## Reporting a Vulnerability
+## 报告安全漏洞
 
-Do not open a public issue for a suspected vulnerability or include credentials, customer data, access tokens, or exploit details in public discussions.
+发现疑似安全漏洞时，请勿创建公开 Issue，也不要在公开讨论中提供凭据、Customer 数据、访问 Token 或可利用细节。
 
-Use GitHub Private Vulnerability Reporting when it is enabled for the repository. If it is unavailable, contact the maintainers privately through the contact method listed on their GitHub profiles.
+仓库启用 GitHub Private Vulnerability Reporting 后，请优先使用该渠道。如果暂不可用，请通过维护者 GitHub 主页提供的联系方式私下联系。
 
-Please include:
+报告内容建议包含：
 
-- The affected component and revision.
-- Reproduction steps or a minimal proof of concept.
-- The expected impact and required preconditions.
-- Any suggested mitigation, if known.
+- 受影响的组件和版本或 Commit。
+- 可复现步骤或最小概念验证。
+- 预期影响和利用前置条件。
+- 已知的缓解建议（如有）。
 
-Maintainers will acknowledge reports and coordinate remediation on a best-effort basis. There is no guaranteed response SLA before a stable release.
+维护者会尽力确认并协调修复。稳定版本发布前不承诺固定响应 SLA。
 
-## Security Scope
+## 安全范围
 
-Security-sensitive areas include tenant isolation, customer identity, Tool permissions, prompt injection boundaries, secret handling, document upload validation, Agent Trace redaction, and authorization checks.
+重点安全领域包括租户隔离、Customer 身份、Tool 权限、Prompt Injection 边界、密钥处理、文档上传校验、Agent Trace 脱敏和后端授权检查。
 
-Demo data and Mock Connectors must never be treated as a substitute for production identity, access control, audit, backup, or compliance controls.
+Demo 数据和 Mock Connector 不能替代生产级身份认证、访问控制、审计、备份或合规措施。

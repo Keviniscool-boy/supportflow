@@ -5,7 +5,7 @@
 | 项目 | 内容 |
 | --- | --- |
 | 文档版本 | v1.0 |
-| 文档状态 | 评审版（Review） |
+| 文档状态 | 计划中（草案） |
 | 对应产品版本 | v0.2 SupportFlow MVP |
 | 编写日期 | 2026-07-24 |
 | 上游文档 | [PRD](./PRD.md)、[Architecture](./Architecture.md)、[Database](./Database.md) |

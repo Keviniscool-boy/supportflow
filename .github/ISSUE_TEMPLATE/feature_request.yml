@@ -1,5 +1,5 @@
-name: Feature request
-description: Propose a user problem or product improvement.
+name: 功能建议
+description: 提交用户问题或产品改进建议。
 title: "feat: "
 labels:
   - enhancement
@@ -7,36 +7,36 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please focus on the user problem before proposing an implementation. v0.2 scope is intentionally constrained.
+        请先描述用户问题，再讨论实现方案。v0.2 的范围经过有意约束，请勿默认扩大版本边界。
   - type: checkboxes
     attributes:
-      label: Before submitting
+      label: 提交之前
       options:
-        - label: I searched existing issues and the roadmap.
+        - label: 我已搜索现有 Issue 和路线图。
           required: true
   - type: textarea
     attributes:
-      label: User problem
-      description: Who has the problem, in what situation, and why does it matter?
+      label: 用户问题
+      description: 谁在什么场景下遇到了什么问题，为什么值得解决？
     validations:
       required: true
   - type: textarea
     attributes:
-      label: Proposed outcome
-      description: Describe the desired behavior without assuming a specific implementation.
+      label: 期望结果
+      description: 描述期望行为，不要预设具体技术实现。
     validations:
       required: true
   - type: dropdown
     attributes:
-      label: Suggested target
+      label: 建议版本
       options:
         - v0.2 SupportFlow MVP
         - v0.3 Enterprise Foundation
-        - Future roadmap
-        - Not sure
+        - 后续路线图
+        - 暂不确定
     validations:
       required: true
   - type: textarea
     attributes:
-      label: Alternatives and trade-offs
-      description: Describe alternatives, constraints, or compatibility concerns.
+      label: 替代方案与取舍
+      description: 描述替代方案、约束或兼容性问题。

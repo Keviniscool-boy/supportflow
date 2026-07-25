@@ -1,21 +1,21 @@
-## What changed
+## 变更内容
 
-Describe the problem and the focused change that solves it.
+说明要解决的问题以及本次聚焦的改动。
 
-## Why
+## 变更原因
 
-Explain the user, product, or engineering value.
+说明该改动带来的用户、产品或工程价值。
 
-## Validation
+## 验证方式
 
-List tests, checks, or manual scenarios completed.
+列出已完成的测试、检查或手动验证场景。
 
-## Checklist
+## 检查清单
 
-- [ ] The change is scoped to one concern.
-- [ ] Tests are included, or the reason they are not applicable is explained.
-- [ ] Documentation and changelog are updated when needed.
-- [ ] No secrets, customer data, or generated runtime files are included.
-- [ ] The change respects the accepted v0.2 scope and security boundaries.
+- [ ] 本次变更只处理一个关注点。
+- [ ] 已包含测试，或已说明测试不适用的原因。
+- [ ] 已在需要时更新文档和变更日志。
+- [ ] 不包含密钥、Customer 数据或运行时生成文件。
+- [ ] 变更符合已确认的 v0.2 范围和安全边界。
 
 Closes #
