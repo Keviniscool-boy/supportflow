@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/Keviniscool-boy/supportflow/backend/internal/config"
 	"github.com/Keviniscool-boy/supportflow/backend/internal/httpapi"
+	"github.com/Keviniscool-boy/supportflow/backend/internal/session"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
@@ -20,7 +23,28 @@ func main() {
 		slog.Error("配置无效", "error", err)
 		os.Exit(1)
 	}
-	server := httpapi.NewServer(loadedConfig)
+	var sessionStore session.Store = session.NewMemoryStore(loadedConfig.SessionTTL)
+	var database *sql.DB
+	if loadedConfig.DatabaseURL != "" {
+		database, err = sql.Open("pgx", loadedConfig.DatabaseURL)
+		if err != nil {
+			slog.Error("数据库连接初始化失败", "error", err)
+			os.Exit(1)
+		}
+		pingContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err = database.PingContext(pingContext)
+		cancel()
+		if err != nil {
+			slog.Error("数据库不可用", "error", err)
+			_ = database.Close()
+			os.Exit(1)
+		}
+		sessionStore = session.NewSQLStore(database, loadedConfig.SessionTTL)
+	}
+	if database != nil {
+		defer database.Close()
+	}
+	server := httpapi.NewServerWithSessionStore(loadedConfig, sessionStore)
 	httpServer := &http.Server{
 		Addr:              loadedConfig.HTTPAddress,
 		Handler:           server.Handler(),

@@ -13,6 +13,7 @@ SupportFlow 的重要变更都会记录在此文件中。
 - 增加面向 Lite 服务器的 PostgreSQL、Redis、Migration 和 App Compose 配置。
 - 完成 Lite 容器启动、健康检查、扩展安装和重复 Migration 幂等验证。
 - 完成 v0.2 核心 PostgreSQL Schema、NovaTech Demo Seed 和 pgvector Mock 知识索引数据。
+- 完成 Demo Session、HttpOnly Cookie、CSRF 校验、过期/撤销和 CORS 基础边界。
 - 增加后端单元测试、静态检查和 CI 验证入口。
 - 产品需求文档、技术架构、数据库设计和 API 设计。
 - 开源仓库协作、安全与社区治理基线。

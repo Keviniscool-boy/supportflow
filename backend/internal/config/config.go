@@ -16,6 +16,7 @@ type Config struct {
 	ModelMode      string
 	AllowedOrigin  string
 	SessionTTL     time.Duration
+	SecureCookies  bool
 }
 
 func Load() (Config, error) {
@@ -40,6 +41,14 @@ func Load() (Config, error) {
 		ModelMode:      stringEnv("SUPPORTFLOW_MODEL_MODE", "mock"),
 		AllowedOrigin:  stringEnv("SUPPORTFLOW_ALLOWED_ORIGIN", ""),
 		SessionTTL:     sessionTTL,
+		SecureCookies:  secureCookies(stringEnv("SUPPORTFLOW_ENV", "development")),
+	}
+	if value := os.Getenv("SUPPORTFLOW_COOKIE_SECURE"); value != "" {
+		parsed, parseErr := strconv.ParseBool(value)
+		if parseErr != nil {
+			return Config{}, fmt.Errorf("SUPPORTFLOW_COOKIE_SECURE must be true or false")
+		}
+		config.SecureCookies = parsed
 	}
 	if err := config.Validate(); err != nil {
 		return Config{}, err
@@ -100,4 +109,8 @@ func durationEnv(key string, fallback time.Duration) (time.Duration, error) {
 		return 0, fmt.Errorf("%s must be a duration", key)
 	}
 	return parsed, nil
+}
+
+func secureCookies(environment string) bool {
+	return environment == "production-like"
 }
