@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	appclock "github.com/Keviniscool-boy/supportflow/backend/internal/clock"
 )
 
 const DefaultTenantID = "00000000-0000-0000-0000-000000000001"
@@ -51,10 +53,15 @@ type MemoryStore struct {
 	mu       sync.Mutex
 	sessions map[string]Session
 	ttl      time.Duration
+	clock    appclock.Clock
 }
 
 func NewMemoryStore(ttl time.Duration) *MemoryStore {
-	return &MemoryStore{sessions: make(map[string]Session), ttl: ttl}
+	return NewMemoryStoreWithClock(ttl, appclock.System{})
+}
+
+func NewMemoryStoreWithClock(ttl time.Duration, clock appclock.Clock) *MemoryStore {
+	return &MemoryStore{sessions: make(map[string]Session), ttl: ttl, clock: clock}
 }
 
 func (s *MemoryStore) CreateOrGet(_ context.Context, rawToken, locale string) (Session, bool, error) {
@@ -62,12 +69,12 @@ func (s *MemoryStore) CreateOrGet(_ context.Context, rawToken, locale string) (S
 	defer s.mu.Unlock()
 	hash := TokenHash(rawToken)
 	if existing, ok := s.sessions[hash]; ok {
-		if err := active(existing); err != nil {
+		if err := active(existing, s.clock.Now()); err != nil {
 			return Session{}, false, err
 		}
 		return existing, true, nil
 	}
-	now := time.Now().UTC()
+	now := s.clock.Now()
 	created := Session{
 		TenantID:       DefaultTenantID,
 		ID:             newID(),
@@ -93,7 +100,7 @@ func (s *MemoryStore) Get(_ context.Context, rawToken string) (Session, error) {
 	if !ok {
 		return Session{}, ErrNotFound
 	}
-	if err := active(existing); err != nil {
+	if err := active(existing, s.clock.Now()); err != nil {
 		return Session{}, err
 	}
 	return existing, nil
@@ -107,7 +114,7 @@ func (s *MemoryStore) Revoke(_ context.Context, rawToken string) error {
 	if !ok {
 		return ErrNotFound
 	}
-	if err := active(existing); err != nil {
+	if err := active(existing, s.clock.Now()); err != nil {
 		return err
 	}
 	existing.Status = "REVOKED"
@@ -116,18 +123,23 @@ func (s *MemoryStore) Revoke(_ context.Context, rawToken string) error {
 }
 
 type SQLStore struct {
-	db  *sql.DB
-	ttl time.Duration
+	db    *sql.DB
+	ttl   time.Duration
+	clock appclock.Clock
 }
 
 func NewSQLStore(db *sql.DB, ttl time.Duration) *SQLStore {
-	return &SQLStore{db: db, ttl: ttl}
+	return NewSQLStoreWithClock(db, ttl, appclock.System{})
+}
+
+func NewSQLStoreWithClock(db *sql.DB, ttl time.Duration, clock appclock.Clock) *SQLStore {
+	return &SQLStore{db: db, ttl: ttl, clock: clock}
 }
 
 func (s *SQLStore) CreateOrGet(ctx context.Context, rawToken, locale string) (Session, bool, error) {
 	existing, err := s.query(ctx, TokenHash(rawToken))
 	if err == nil {
-		if err := active(existing); err != nil {
+		if err := active(existing, s.clock.Now()); err != nil {
 			return Session{}, false, err
 		}
 		return existing, true, nil
@@ -135,7 +147,7 @@ func (s *SQLStore) CreateOrGet(ctx context.Context, rawToken, locale string) (Se
 	if !errors.Is(err, ErrNotFound) {
 		return Session{}, false, err
 	}
-	now := time.Now().UTC()
+	now := s.clock.Now()
 	expiresAt := now.Add(s.ttl)
 	sessionID := newID()
 	customerID := newID()
@@ -145,14 +157,14 @@ func (s *SQLStore) CreateOrGet(ctx context.Context, rawToken, locale string) (Se
 	}
 	defer tx.Rollback()
 	_, err = tx.ExecContext(ctx, `INSERT INTO demo_sessions
-		(tenant_id, id, token_hash, session_type, data_generation, request_limit, token_limit, upload_file_limit, expires_at)
-		SELECT id, $1, $2, 'VISITOR', data_generation, 100, 100000, 5, $3 FROM tenants WHERE id = $4`,
-		sessionID, TokenHash(rawToken), expiresAt, DefaultTenantID)
+		(tenant_id, id, token_hash, session_type, data_generation, request_limit, token_limit, upload_file_limit, expires_at, created_at, updated_at)
+		SELECT id, $1, $2, 'VISITOR', data_generation, 100, 100000, 5, $3, $4, $4 FROM tenants WHERE id = $5`,
+		sessionID, TokenHash(rawToken), expiresAt, now, DefaultTenantID)
 	if err != nil {
 		return Session{}, false, fmt.Errorf("insert demo session: %w", err)
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO customers (tenant_id, id, demo_session_id, display_name, locale)
-		VALUES ($1, $2, $3, $4, $5)`, DefaultTenantID, customerID, sessionID, "演示客户", normalizeLocale(locale))
+	_, err = tx.ExecContext(ctx, `INSERT INTO customers (tenant_id, id, demo_session_id, display_name, locale, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $6)`, DefaultTenantID, customerID, sessionID, "演示客户", normalizeLocale(locale), now)
 	if err != nil {
 		return Session{}, false, fmt.Errorf("insert demo customer: %w", err)
 	}
@@ -171,9 +183,9 @@ func (s *SQLStore) Get(ctx context.Context, rawToken string) (Session, error) {
 	if err != nil {
 		return Session{}, err
 	}
-	if err := active(existing); err != nil {
+	if err := active(existing, s.clock.Now()); err != nil {
 		if errors.Is(err, ErrExpired) {
-			_, _ = s.db.ExecContext(ctx, "UPDATE demo_sessions SET status = 'EXPIRED', updated_at = now(), row_version = row_version + 1 WHERE tenant_id = $1 AND id = $2 AND status = 'ACTIVE'", existing.TenantID, existing.ID)
+			_, _ = s.db.ExecContext(ctx, "UPDATE demo_sessions SET status = 'EXPIRED', updated_at = $3, row_version = row_version + 1 WHERE tenant_id = $1 AND id = $2 AND status = 'ACTIVE'", existing.TenantID, existing.ID, s.clock.Now())
 		}
 		return Session{}, err
 	}
@@ -185,10 +197,10 @@ func (s *SQLStore) Revoke(ctx context.Context, rawToken string) error {
 	if err != nil {
 		return err
 	}
-	if err := active(existing); err != nil {
+	if err := active(existing, s.clock.Now()); err != nil {
 		return err
 	}
-	result, err := s.db.ExecContext(ctx, "UPDATE demo_sessions SET status = 'REVOKED', updated_at = now(), row_version = row_version + 1 WHERE tenant_id = $1 AND id = $2 AND status = 'ACTIVE'", existing.TenantID, existing.ID)
+	result, err := s.db.ExecContext(ctx, "UPDATE demo_sessions SET status = 'REVOKED', updated_at = $3, row_version = row_version + 1 WHERE tenant_id = $1 AND id = $2 AND status = 'ACTIVE'", existing.TenantID, existing.ID, s.clock.Now())
 	if err != nil {
 		return fmt.Errorf("revoke session: %w", err)
 	}
@@ -219,14 +231,14 @@ func (s *SQLStore) query(ctx context.Context, tokenHash string) (Session, error)
 	return result, nil
 }
 
-func active(value Session) error {
+func active(value Session, now time.Time) error {
 	if value.Status == "REVOKED" {
 		return ErrRevoked
 	}
 	if value.Status == "RESETTING" {
 		return ErrResetting
 	}
-	if value.Status != "ACTIVE" || !time.Now().Before(value.ExpiresAt) {
+	if value.Status != "ACTIVE" || !now.Before(value.ExpiresAt) {
 		return ErrExpired
 	}
 	return nil

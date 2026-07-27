@@ -146,7 +146,7 @@ test(tool): cover permission failures
 | `T-006` | HTTP 基础中间件 | T-001、T-002 | Request ID、JSON 错误 Envelope、Content-Type、Body 限制、稳定错误码 | 已完成 |
 | `T-007` | Session 与 CSRF 基础 | T-002、T-006 | Demo Cookie、CSRF、过期/撤销、同源 CORS 和安全 Cookie 属性 | 已完成 |
 | `T-008` | 日志与 OpenTelemetry 接入边界 | T-001、T-006 | `slog` 输出 stdout；敏感字段脱敏；Trace 与系统日志不混表 | 待开始 |
-| `T-009` | 测试 Fixture 与 Mock Clock | T-003、T-004 | 可重复 Tenant、Customer、订单、文档、时间和 Session Fixture | 待开始 |
+| `T-009` | 测试 Fixture 与 Mock Clock | T-003、T-004 | 可重复 Tenant、Customer、订单、文档、时间和 Session Fixture | 已完成 |
 
 ## 8. v0.1 Technical Preview 任务
 

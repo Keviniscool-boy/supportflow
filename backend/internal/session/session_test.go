@@ -5,6 +5,9 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	appclock "github.com/Keviniscool-boy/supportflow/backend/internal/clock"
+	"github.com/Keviniscool-boy/supportflow/backend/internal/testfixture"
 )
 
 func TestMemoryStoreCreatesAndReusesSession(t *testing.T) {
@@ -20,16 +23,17 @@ func TestMemoryStoreCreatesAndReusesSession(t *testing.T) {
 }
 
 func TestMemoryStoreExpiresAndRevokes(t *testing.T) {
-	store := NewMemoryStore(time.Millisecond)
+	clock := appclock.NewFixed(testfixture.FrozenTime)
+	store := NewMemoryStoreWithClock(time.Hour, clock)
 	_, _, err := store.CreateOrGet(context.Background(), "token", "zh-CN")
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(5 * time.Millisecond)
+	clock.Advance(time.Hour)
 	if _, err := store.Get(context.Background(), "token"); !errors.Is(err, ErrExpired) {
 		t.Fatalf("expected expired session, got %v", err)
 	}
-	store = NewMemoryStore(time.Hour)
+	store = NewMemoryStoreWithClock(time.Hour, appclock.NewFixed(testfixture.FrozenTime))
 	_, _, err = store.CreateOrGet(context.Background(), "token", "zh-CN")
 	if err != nil {
 		t.Fatal(err)
