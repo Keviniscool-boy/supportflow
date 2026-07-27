@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -12,6 +13,11 @@ import (
 	"github.com/Keviniscool-boy/supportflow/backend/internal/config"
 	"github.com/Keviniscool-boy/supportflow/backend/internal/session"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const requestIDKey = "supportflow.request_id"
@@ -37,7 +43,7 @@ func NewServerWithSessionStore(config config.Config, store session.Store) *Serve
 		gin.SetMode(gin.ReleaseMode)
 	}
 	engine := gin.New()
-	engine.Use(requestIDMiddleware(), corsMiddleware(config.AllowedOrigin), csrfMiddleware(secret), recoveryMiddleware(), bodyLimitMiddleware(config.MaxBodyBytes), contentTypeMiddleware())
+	engine.Use(requestIDMiddleware(), telemetryMiddleware(), requestLogMiddleware(), corsMiddleware(config.AllowedOrigin), csrfMiddleware(secret), recoveryMiddleware(), bodyLimitMiddleware(config.MaxBodyBytes), contentTypeMiddleware())
 	server := &Server{engine: engine, config: config, sessions: store, csrfSecret: secret}
 	server.registerRoutes()
 	return server
@@ -82,8 +88,7 @@ func (s *Server) createSession(c *gin.Context) {
 		writeError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "errors.internal_error", false, nil)
 		return
 	}
-	locale := c.GetHeader("Accept-Language")
-	created, _, err := s.sessions.CreateOrGet(c.Request.Context(), rawToken, locale)
+	created, _, err := s.sessions.CreateOrGet(c.Request.Context(), rawToken, c.GetHeader("Accept-Language"))
 	if err != nil {
 		writeSessionError(c, err)
 		return
@@ -251,6 +256,60 @@ func requestIDMiddleware() gin.HandlerFunc {
 	}
 }
 
+func telemetryMiddleware() gin.HandlerFunc {
+	propagator := propagation.TraceContext{}
+	tracer := otel.Tracer("github.com/Keviniscool-boy/supportflow/backend/http")
+	return func(c *gin.Context) {
+		parentContext := propagator.Extract(c.Request.Context(), propagation.HeaderCarrier(c.Request.Header))
+		spanContext, span := tracer.Start(parentContext, c.Request.Method+" "+c.Request.URL.Path, trace.WithSpanKind(trace.SpanKindServer))
+		c.Request = c.Request.WithContext(spanContext)
+		defer func() {
+			route := c.FullPath()
+			if route == "" {
+				route = "unmatched"
+			}
+			span.SetName(c.Request.Method + " " + route)
+			span.SetAttributes(
+				attribute.String("http.request.method", c.Request.Method),
+				attribute.String("http.route", route),
+				attribute.Int("http.response.status_code", c.Writer.Status()),
+				attribute.String("supportflow.request_id", requestID(c)),
+			)
+			if c.Writer.Status() >= http.StatusInternalServerError {
+				span.SetStatus(codes.Error, http.StatusText(c.Writer.Status()))
+			}
+			span.End()
+		}()
+		c.Next()
+	}
+}
+
+func requestLogMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		startedAt := time.Now()
+		c.Next()
+		attributes := []any{
+			"request_id", requestID(c),
+			"method", c.Request.Method,
+			"route", safeRoute(c),
+			"status", c.Writer.Status(),
+			"duration_ms", time.Since(startedAt).Milliseconds(),
+			"response_bytes", c.Writer.Size(),
+		}
+		if spanContext := trace.SpanContextFromContext(c.Request.Context()); spanContext.IsValid() {
+			attributes = append(attributes, "trace_id", spanContext.TraceID().String(), "span_id", spanContext.SpanID().String())
+		}
+		slog.InfoContext(c.Request.Context(), "http request completed", attributes...)
+	}
+}
+
+func safeRoute(c *gin.Context) string {
+	if route := c.FullPath(); route != "" {
+		return route
+	}
+	return "unmatched"
+}
+
 func validRequestID(value string) bool {
 	if value == "" || len(value) > 100 {
 		return false
@@ -282,7 +341,9 @@ func recoveryMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if recover() != nil {
+				slog.ErrorContext(c.Request.Context(), "http panic recovered", "request_id", requestID(c), "method", c.Request.Method, "route", safeRoute(c))
 				writeError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "errors.internal_error", false, nil)
+				c.Abort()
 			}
 		}()
 		c.Next()

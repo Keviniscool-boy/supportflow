@@ -13,11 +13,13 @@ import (
 
 	"github.com/Keviniscool-boy/supportflow/backend/internal/config"
 	"github.com/Keviniscool-boy/supportflow/backend/internal/httpapi"
+	"github.com/Keviniscool-boy/supportflow/backend/internal/observability"
 	"github.com/Keviniscool-boy/supportflow/backend/internal/session"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
+	slog.SetDefault(observability.NewLogger(os.Stdout, slog.LevelInfo))
 	loadedConfig, err := config.Load()
 	if err != nil {
 		slog.Error("配置无效", "error", err)

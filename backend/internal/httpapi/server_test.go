@@ -106,6 +106,17 @@ func TestDemoSessionCookieAndCSRF(t *testing.T) {
 	}
 }
 
+func TestTraceparentIsAcceptedWithoutCollector(t *testing.T) {
+	server := NewServer(config.Config{Environment: "development", MaxBodyBytes: 1024})
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/health", nil)
+	request.Header.Set("traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")
+	server.Handler().ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected health response, got %d", recorder.Code)
+	}
+}
+
 func TestAllowedOriginCORS(t *testing.T) {
 	server := NewServer(config.Config{Environment: "development", MaxBodyBytes: 1024, AllowedOrigin: "http://localhost:3000"})
 	recorder := httptest.NewRecorder()
