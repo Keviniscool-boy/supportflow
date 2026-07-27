@@ -11,7 +11,9 @@ import (
 	"syscall"
 	"time"
 
+	appclock "github.com/Keviniscool-boy/supportflow/backend/internal/clock"
 	"github.com/Keviniscool-boy/supportflow/backend/internal/config"
+	"github.com/Keviniscool-boy/supportflow/backend/internal/conversation"
 	"github.com/Keviniscool-boy/supportflow/backend/internal/httpapi"
 	"github.com/Keviniscool-boy/supportflow/backend/internal/observability"
 	"github.com/Keviniscool-boy/supportflow/backend/internal/session"
@@ -26,6 +28,7 @@ func main() {
 		os.Exit(1)
 	}
 	var sessionStore session.Store = session.NewMemoryStore(loadedConfig.SessionTTL)
+	var conversationRepository conversation.Repository = conversation.NewMemoryRepository()
 	var database *sql.DB
 	if loadedConfig.DatabaseURL != "" {
 		database, err = sql.Open("pgx", loadedConfig.DatabaseURL)
@@ -42,11 +45,13 @@ func main() {
 			os.Exit(1)
 		}
 		sessionStore = session.NewSQLStore(database, loadedConfig.SessionTTL)
+		conversationRepository = conversation.NewSQLRepository(database)
 	}
 	if database != nil {
 		defer database.Close()
 	}
-	server := httpapi.NewServerWithSessionStore(loadedConfig, sessionStore)
+	conversationService := conversation.NewService(conversationRepository, appclock.System{})
+	server := httpapi.NewServerWithDependencies(loadedConfig, sessionStore, conversationService)
 	httpServer := &http.Server{
 		Addr:              loadedConfig.HTTPAddress,
 		Handler:           server.Handler(),
@@ -58,7 +63,7 @@ func main() {
 	shutdownContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	serverError := make(chan error, 1)
-	slog.Info("SupportFlow 服务启动", "address", loadedConfig.HTTPAddress, "environment", loadedConfig.Environment)
+	slog.Info("SupportFlow 服务启动", "http_address", loadedConfig.HTTPAddress, "environment", loadedConfig.Environment)
 	go func() {
 		serverError <- httpServer.ListenAndServe()
 	}()

@@ -1,6 +1,6 @@
 # SupportFlow 后端
 
-后端采用 Go 1.24+、Gin、PostgreSQL/pgx 和模块化单体结构。当前已提供配置校验、Migration、统一 HTTP 错误边界、脱敏日志、轻量 OpenTelemetry 接入边界，以及 Demo Session 与 Customer 服务端身份上下文；Agent、知识库和工单业务按任务清单逐步实现。
+后端采用 Go 1.24+、Gin、PostgreSQL/pgx 和模块化单体结构。当前已提供配置校验、Migration、统一 HTTP 错误边界、脱敏日志、轻量 OpenTelemetry 接入边界、Demo Customer 身份上下文，以及 Conversation/Message 服务；Agent、知识库和工单业务按任务清单逐步实现。
 
 ## 本地运行
 

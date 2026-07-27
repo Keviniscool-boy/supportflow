@@ -4,15 +4,15 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
-	"io"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
+	appclock "github.com/Keviniscool-boy/supportflow/backend/internal/clock"
 	"github.com/Keviniscool-boy/supportflow/backend/internal/config"
+	"github.com/Keviniscool-boy/supportflow/backend/internal/conversation"
 	"github.com/Keviniscool-boy/supportflow/backend/internal/identity"
 	"github.com/Keviniscool-boy/supportflow/backend/internal/session"
 	"github.com/gin-gonic/gin"
@@ -27,10 +27,11 @@ const requestIDKey = "supportflow.request_id"
 const customerCookieName = "sf_demo_customer"
 
 type Server struct {
-	engine     *gin.Engine
-	config     config.Config
-	sessions   session.Store
-	csrfSecret []byte
+	engine        *gin.Engine
+	config        config.Config
+	sessions      session.Store
+	conversations *conversation.Service
+	csrfSecret    []byte
 }
 
 type createSessionRequest struct {
@@ -38,10 +39,14 @@ type createSessionRequest struct {
 }
 
 func NewServer(config config.Config) *Server {
-	return NewServerWithSessionStore(config, session.NewMemoryStore(config.SessionTTL))
+	return NewServerWithDependencies(config, session.NewMemoryStore(config.SessionTTL), conversation.NewService(conversation.NewMemoryRepository(), appclock.System{}))
 }
 
 func NewServerWithSessionStore(config config.Config, store session.Store) *Server {
+	return NewServerWithDependencies(config, store, conversation.NewService(conversation.NewMemoryRepository(), appclock.System{}))
+}
+
+func NewServerWithDependencies(config config.Config, sessionStore session.Store, conversationService *conversation.Service) *Server {
 	secret, err := session.NewSecret()
 	if err != nil {
 		panic(err)
@@ -51,7 +56,7 @@ func NewServerWithSessionStore(config config.Config, store session.Store) *Serve
 	}
 	engine := gin.New()
 	engine.Use(requestIDMiddleware(), telemetryMiddleware(), requestLogMiddleware(), corsMiddleware(config.AllowedOrigin), csrfMiddleware(secret), recoveryMiddleware(), bodyLimitMiddleware(config.MaxBodyBytes), contentTypeMiddleware())
-	server := &Server{engine: engine, config: config, sessions: store, csrfSecret: secret}
+	server := &Server{engine: engine, config: config, sessions: sessionStore, conversations: conversationService, csrfSecret: secret}
 	server.registerRoutes()
 	return server
 }
@@ -70,7 +75,9 @@ func (s *Server) registerRoutes() {
 	s.engine.POST("/api/v1/demo/sessions", s.createSession)
 	s.engine.GET("/api/v1/demo/session", s.getSession)
 	s.engine.DELETE("/api/v1/demo/session", s.revokeSession)
-	s.engine.Group("/api/v1/customer").Use(s.customerContextMiddleware())
+	customerRoutes := s.engine.Group("/api/v1/customer")
+	customerRoutes.Use(s.customerContextMiddleware())
+	s.registerConversationRoutes(customerRoutes)
 	s.engine.NoRoute(func(c *gin.Context) {
 		writeError(c, http.StatusNotFound, "RESOURCE_NOT_FOUND", "errors.resource_not_found", false, nil)
 	})
@@ -87,6 +94,7 @@ func (s *Server) customerContextMiddleware() gin.HandlerFunc {
 			TenantID:       current.TenantID,
 			SessionID:      current.ID,
 			CustomerID:     current.CustomerID,
+			DisplayName:    current.DisplayName,
 			Locale:         current.Locale,
 			DataGeneration: current.DataGeneration,
 		}
@@ -129,18 +137,8 @@ func (s *Server) createSession(c *gin.Context) {
 }
 
 func decodeSessionLocale(c *gin.Context) (string, bool) {
-	if c.Request.Body == nil || c.Request.ContentLength == 0 {
-		return c.GetHeader("Accept-Language"), true
-	}
-	decoder := json.NewDecoder(c.Request.Body)
-	decoder.DisallowUnknownFields()
 	var request createSessionRequest
-	if err := decoder.Decode(&request); err != nil {
-		writeError(c, http.StatusBadRequest, "INVALID_JSON", "errors.invalid_json", false, nil)
-		return "", false
-	}
-	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		writeError(c, http.StatusBadRequest, "INVALID_JSON", "errors.invalid_json", false, nil)
+	if !decodeOptionalJSON(c, &request) {
 		return "", false
 	}
 	if request.Locale != "" && request.Locale != "zh-CN" && request.Locale != "en-US" {

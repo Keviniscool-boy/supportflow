@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Keviniscool-boy/supportflow/backend/internal/config"
+	"github.com/Keviniscool-boy/supportflow/backend/internal/conversation"
 	"github.com/Keviniscool-boy/supportflow/backend/internal/identity"
 	"github.com/gin-gonic/gin"
 )
@@ -167,6 +169,140 @@ func TestCustomerContextComesOnlyFromValidatedSession(t *testing.T) {
 	if second.Body.String() != first.Body.String() {
 		t.Fatalf("same session must inject same customer context: %s != %s", first.Body.String(), second.Body.String())
 	}
+}
+
+func TestCustomerConversationLifecycleAndIsolation(t *testing.T) {
+	server := NewServer(config.Config{Environment: "development", MaxBodyBytes: 4096, SessionTTL: time.Hour})
+	firstCookie, firstCSRF, firstSession := createTestSession(t, server)
+
+	missingCSRF := httptest.NewRecorder()
+	missingCSRFRequest := httptest.NewRequest(http.MethodPost, "/api/v1/customer/conversations", strings.NewReader(`{"subject":"耳机问题"}`))
+	missingCSRFRequest.AddCookie(firstCookie)
+	server.Handler().ServeHTTP(missingCSRF, missingCSRFRequest)
+	if missingCSRF.Code != http.StatusForbidden {
+		t.Fatalf("expected CSRF rejection, got %d: %s", missingCSRF.Code, missingCSRF.Body.String())
+	}
+
+	conversationIDs := make([]string, 0, 3)
+	for index := 0; index < 3; index++ {
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodPost, "/api/v1/customer/conversations", strings.NewReader(`{"subject":"耳机问题 test@example.com"}`))
+		request.AddCookie(firstCookie)
+		request.Header.Set("X-CSRF-Token", firstCSRF)
+		server.Handler().ServeHTTP(recorder, request)
+		if recorder.Code != http.StatusCreated || recorder.Header().Get("ETag") == "" || strings.Contains(recorder.Body.String(), "test@example.com") {
+			t.Fatalf("unexpected create response %d: %s", recorder.Code, recorder.Body.String())
+		}
+		var response struct {
+			Data struct {
+				ID string `json:"id"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+			t.Fatal(err)
+		}
+		conversationIDs = append(conversationIDs, response.Data.ID)
+	}
+
+	current, err := server.sessions.Get(context.Background(), firstCookie.Value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	customer := identity.CustomerContext{
+		TenantID: current.TenantID, SessionID: current.ID, CustomerID: current.CustomerID, DisplayName: current.DisplayName, Locale: current.Locale, DataGeneration: current.DataGeneration,
+	}
+	for _, text := range []string{"手机号 13800138000", "订单 SF20260001", "仍然没有声音"} {
+		if _, err := server.conversations.AppendMessage(context.Background(), customer, conversationIDs[0], conversation.NewMessage{ActorType: conversation.ActorCustomer, ContentType: conversation.ContentText, Text: text, Locale: "zh-CN"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	listRecorder := httptest.NewRecorder()
+	listRequest := httptest.NewRequest(http.MethodGet, "/api/v1/customer/conversations?limit=2", nil)
+	listRequest.AddCookie(firstCookie)
+	server.Handler().ServeHTTP(listRecorder, listRequest)
+	if listRecorder.Code != http.StatusOK {
+		t.Fatalf("expected list response, got %d: %s", listRecorder.Code, listRecorder.Body.String())
+	}
+	var listResponse struct {
+		Data []map[string]any `json:"data"`
+		Meta struct {
+			NextCursor string `json:"next_cursor"`
+			HasMore    bool   `json:"has_more"`
+		} `json:"meta"`
+	}
+	if err := json.Unmarshal(listRecorder.Body.Bytes(), &listResponse); err != nil {
+		t.Fatal(err)
+	}
+	if len(listResponse.Data) != 2 || !listResponse.Meta.HasMore || listResponse.Meta.NextCursor == "" {
+		t.Fatalf("unexpected conversation page: %s", listRecorder.Body.String())
+	}
+
+	tamperedRecorder := httptest.NewRecorder()
+	tamperedRequest := httptest.NewRequest(http.MethodGet, "/api/v1/customer/conversations?cursor="+listResponse.Meta.NextCursor+"x", nil)
+	tamperedRequest.AddCookie(firstCookie)
+	server.Handler().ServeHTTP(tamperedRecorder, tamperedRequest)
+	if tamperedRecorder.Code != http.StatusBadRequest || !strings.Contains(tamperedRecorder.Body.String(), "INVALID_CURSOR") {
+		t.Fatalf("expected cursor rejection, got %d: %s", tamperedRecorder.Code, tamperedRecorder.Body.String())
+	}
+
+	messagesRecorder := httptest.NewRecorder()
+	messagesRequest := httptest.NewRequest(http.MethodGet, "/api/v1/customer/conversations/"+conversationIDs[0]+"/messages?limit=2", nil)
+	messagesRequest.AddCookie(firstCookie)
+	server.Handler().ServeHTTP(messagesRecorder, messagesRequest)
+	if messagesRecorder.Code != http.StatusOK || strings.Contains(messagesRecorder.Body.String(), "13800138000") || strings.Contains(messagesRecorder.Body.String(), "SF20260001") {
+		t.Fatalf("unexpected message response %d: %s", messagesRecorder.Code, messagesRecorder.Body.String())
+	}
+	if !strings.Contains(messagesRecorder.Body.String(), `"next_after_sequence":2`) || !strings.Contains(messagesRecorder.Body.String(), `"has_more":true`) {
+		t.Fatalf("message resume metadata missing: %s", messagesRecorder.Body.String())
+	}
+
+	secondCookie, _, _ := createTestSession(t, server)
+	foreignRecorder := httptest.NewRecorder()
+	foreignRequest := httptest.NewRequest(http.MethodGet, "/api/v1/customer/conversations/"+conversationIDs[0], nil)
+	foreignRequest.AddCookie(secondCookie)
+	server.Handler().ServeHTTP(foreignRecorder, foreignRequest)
+	if foreignRecorder.Code != http.StatusNotFound {
+		t.Fatalf("expected cross-customer 404, got %d: %s", foreignRecorder.Code, foreignRecorder.Body.String())
+	}
+
+	if firstSession == "" {
+		t.Fatal("test session id was empty")
+	}
+}
+
+func TestCreateConversationRejectsUnknownIdentityFields(t *testing.T) {
+	server := NewServer(config.Config{Environment: "development", MaxBodyBytes: 4096, SessionTTL: time.Hour})
+	cookie, csrfToken, _ := createTestSession(t, server)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/customer/conversations", strings.NewReader(`{"subject":"耳机问题","customer_id":"attacker"}`))
+	request.AddCookie(cookie)
+	request.Header.Set("X-CSRF-Token", csrfToken)
+	server.Handler().ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusBadRequest || !strings.Contains(recorder.Body.String(), "UNKNOWN_FIELD") {
+		t.Fatalf("expected unknown identity field rejection, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func createTestSession(t *testing.T, server *Server) (*http.Cookie, string, string) {
+	t.Helper()
+	recorder := httptest.NewRecorder()
+	server.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/api/v1/demo/sessions", nil))
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("expected session creation, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	var response struct {
+		Data struct {
+			CSRFToken string `json:"csrf_token"`
+			Session   struct {
+				ID string `json:"id"`
+			} `json:"session"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	return recorder.Result().Cookies()[0], response.Data.CSRFToken, response.Data.Session.ID
 }
 
 func TestTraceparentIsAcceptedWithoutCollector(t *testing.T) {

@@ -153,7 +153,7 @@ test(tool): cover permission failures
 | ID | Task | 依赖 | 交付物与验收条件 | 状态 |
 | --- | --- | --- | --- | --- |
 | `T-101` | Demo Session 与 Customer 上下文 | T-004、T-007 | 创建/查询 Session；每次查询注入唯一 Customer；过期后禁止业务访问 | 已完成 |
-| `T-102` | Conversation 与 Message Service | T-004、T-009、T-101 | 会话创建、消息顺序、脱敏、分页和对象归属测试通过 | 待开始 |
+| `T-102` | Conversation 与 Message Service | T-004、T-009、T-101 | 会话创建、消息顺序、脱敏、分页和对象归属测试通过 | 已完成 |
 | `T-103` | Agent Run 状态机 | T-004、T-102 | 实现固定状态转换、活动 Run 唯一性、步骤/重试上限和恢复查询 | 待开始 |
 | `T-104` | Model Gateway Mock Adapter | T-002、T-103 | Mock 模式稳定返回；OpenAI-Compatible Provider 只使用白名单配置 | 待开始 |
 | `T-105` | Context Builder 与 Policy Guard | T-103、T-104 | 固定信任层级、Prompt Injection 基础拒绝、输入长度和 Token Budget | 待开始 |

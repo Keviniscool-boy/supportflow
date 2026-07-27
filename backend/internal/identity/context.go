@@ -6,6 +6,7 @@ type CustomerContext struct {
 	TenantID       string
 	SessionID      string
 	CustomerID     string
+	DisplayName    string
 	Locale         string
 	DataGeneration int
 }
