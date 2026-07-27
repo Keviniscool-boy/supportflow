@@ -4,13 +4,16 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/Keviniscool-boy/supportflow/backend/internal/config"
+	"github.com/Keviniscool-boy/supportflow/backend/internal/identity"
 	"github.com/Keviniscool-boy/supportflow/backend/internal/session"
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel"
@@ -28,6 +31,10 @@ type Server struct {
 	config     config.Config
 	sessions   session.Store
 	csrfSecret []byte
+}
+
+type createSessionRequest struct {
+	Locale string `json:"locale"`
 }
 
 func NewServer(config config.Config) *Server {
@@ -63,9 +70,29 @@ func (s *Server) registerRoutes() {
 	s.engine.POST("/api/v1/demo/sessions", s.createSession)
 	s.engine.GET("/api/v1/demo/session", s.getSession)
 	s.engine.DELETE("/api/v1/demo/session", s.revokeSession)
+	s.engine.Group("/api/v1/customer").Use(s.customerContextMiddleware())
 	s.engine.NoRoute(func(c *gin.Context) {
 		writeError(c, http.StatusNotFound, "RESOURCE_NOT_FOUND", "errors.resource_not_found", false, nil)
 	})
+}
+
+func (s *Server) customerContextMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		_, current, ok := s.requireSession(c)
+		if !ok {
+			c.Abort()
+			return
+		}
+		customer := identity.CustomerContext{
+			TenantID:       current.TenantID,
+			SessionID:      current.ID,
+			CustomerID:     current.CustomerID,
+			Locale:         current.Locale,
+			DataGeneration: current.DataGeneration,
+		}
+		c.Request = c.Request.WithContext(identity.WithCustomer(c.Request.Context(), customer))
+		c.Next()
+	}
 }
 
 func (s *Server) createSession(c *gin.Context) {
@@ -83,18 +110,47 @@ func (s *Server) createSession(c *gin.Context) {
 		}
 		clearCustomerCookie(c, s.config.SecureCookies)
 	}
+	locale, ok := decodeSessionLocale(c)
+	if !ok {
+		return
+	}
 	rawToken, err := session.NewToken()
 	if err != nil {
 		writeError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "errors.internal_error", false, nil)
 		return
 	}
-	created, _, err := s.sessions.CreateOrGet(c.Request.Context(), rawToken, c.GetHeader("Accept-Language"))
+	created, _, err := s.sessions.CreateOrGet(c.Request.Context(), rawToken, locale)
 	if err != nil {
 		writeSessionError(c, err)
 		return
 	}
 	setCustomerCookie(c, rawToken, created.ExpiresAt, s.config.SecureCookies)
 	writeSessionResponse(c, http.StatusCreated, created, session.CSRFToken(s.csrfSecret, rawToken))
+}
+
+func decodeSessionLocale(c *gin.Context) (string, bool) {
+	if c.Request.Body == nil || c.Request.ContentLength == 0 {
+		return c.GetHeader("Accept-Language"), true
+	}
+	decoder := json.NewDecoder(c.Request.Body)
+	decoder.DisallowUnknownFields()
+	var request createSessionRequest
+	if err := decoder.Decode(&request); err != nil {
+		writeError(c, http.StatusBadRequest, "INVALID_JSON", "errors.invalid_json", false, nil)
+		return "", false
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		writeError(c, http.StatusBadRequest, "INVALID_JSON", "errors.invalid_json", false, nil)
+		return "", false
+	}
+	if request.Locale != "" && request.Locale != "zh-CN" && request.Locale != "en-US" {
+		writeError(c, http.StatusUnprocessableEntity, "INVALID_ARGUMENT", "errors.invalid_argument", false, []ErrorDetail{{Field: "locale", Code: "UNSUPPORTED_LOCALE"}})
+		return "", false
+	}
+	if request.Locale == "" {
+		return c.GetHeader("Accept-Language"), true
+	}
+	return request.Locale, true
 }
 
 func (s *Server) getSession(c *gin.Context) {

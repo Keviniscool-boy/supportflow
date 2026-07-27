@@ -1,6 +1,6 @@
 # SupportFlow 后端
 
-后端采用 Go 1.24+、Gin、PostgreSQL/pgx 和模块化单体结构。当前第一批代码只提供应用骨架、配置校验、统一 HTTP 错误边界和顺序 Migration Runner，不包含 Agent、知识库或工单业务实现。
+后端采用 Go 1.24+、Gin、PostgreSQL/pgx 和模块化单体结构。当前已提供配置校验、Migration、统一 HTTP 错误边界、脱敏日志、轻量 OpenTelemetry 接入边界，以及 Demo Session 与 Customer 服务端身份上下文；Agent、知识库和工单业务按任务清单逐步实现。
 
 ## 本地运行
 
@@ -11,7 +11,7 @@ $env:SUPPORTFLOW_MODEL_MODE = "mock"
 go run ./cmd/server
 ```
 
-服务默认监听 `:8080`，提供 `/health` 和 `/ready`。
+服务默认监听 `:8080`，提供 `/health`、`/ready` 和 `/api/v1/demo/session*`。Customer Cookie 为 HttpOnly，写请求需要同时提供 Session 响应中的 CSRF Token。
 
 ## 执行 Migration
 
