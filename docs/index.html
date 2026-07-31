@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SupportFlow — Open-source AI Support & Knowledge-Ops</title>
+  <meta name="description" content="SupportFlow — 受控 Agent 工作流的开源 AI 售后客服与知识运营平台，支持自托管与审计。" />
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#9aa4b2; --accent:#6ee7b7; --glass: rgba(255,255,255,0.04);
+      --maxw:1000px;
+      color-scheme: dark;
+    }
+    *{box-sizing:border-box}
+    body{font-family: Inter, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin:0; background:linear-gradient(180deg,#071029 0%, #071827 100%); color:#e6eef6; -webkit-font-smoothing:antialiased;}
+    .wrap{max-width:var(--maxw); margin:48px auto; padding:24px;}
+    .hero{display:flex;gap:24px;align-items:center;justify-content:space-between}
+    .hero-left{flex:1}
+    h1{margin:0;font-size:28px;line-height:1.05}
+    p.lead{margin-top:12px;color:var(--muted);font-size:15px}
+    .cta{margin-top:18px;display:flex;gap:12px}
+    .btn{background:linear-gradient(90deg,var(--accent),#4dd7a1); color:#02231a; padding:10px 16px; border-radius:8px; font-weight:600; text-decoration:none;}
+    .btn.ghost{background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--accent)}
+    .features{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-top:28px}
+    .card{background:var(--card); padding:16px; border-radius:10px; border:1px solid rgba(255,255,255,0.03);} 
+    .card h3{margin:0 0 8px 0;font-size:15px}
+    .muted{color:var(--muted);font-size:13px}
+    .screenshot{width:420px; max-width:40%; border-radius:12px; background:linear-gradient(180deg,#071827,#0c2433); padding:12px; border:1px solid rgba(255,255,255,0.03)}
+    .screenshot .screen{height:260px; background:linear-gradient(180deg,#031422,#072233); border-radius:8px; display:flex;align-items:center;justify-content:center; color:rgba(255,255,255,0.7); font-size:13px; border:1px dashed rgba(255,255,255,0.04)}
+    .meta-row{display:flex;gap:12px;margin-top:18px;flex-wrap:wrap}
+    .chip{background:var(--glass); padding:6px 10px;border-radius:999px;font-size:13px;color:var(--muted); border:1px solid rgba(255,255,255,0.02)}
+    footer{margin-top:36px;color:var(--muted); font-size:13px; text-align:center}
+    @media (max-width:880px){
+      .hero{flex-direction:column; align-items:flex-start}
+      .screenshot{max-width:100%; width:100%}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="hero-left">
+        <h1>SupportFlow</h1>
+        <p class="lead">受控 Agent 工作流的开源 AI 售后与知识运营平台 — 可审计、可追溯、可自托管。</p>
+        <div class="cta">
+          <a class="btn" href="https://github.com/Keviniscool-boy/supportflow">查看代码 • GitHub</a>
+          <a class="btn ghost" href="/docs/README.md">阅读文档</a>
+        </div>
+
+        <div class="meta-row" style="margin-top:14px">
+          <div class="chip">Go • Gin • PostgreSQL</div>
+          <div class="chip">Agent Workflow • Typed Tools</div>
+          <div class="chip">自托管 Demo</div>
+        </div>
+
+        <div class="features" style="margin-top:22px">
+          <div class="card">
+            <h3>可审计的 Agent 路由</h3>
+            <div class="muted">显式状态机为每个 Agent 定义路由边界与执行许可，便于 Governance 与审计。</div>
+          </div>
+          <div class="card">
+            <h3>类型化工具（Typed Tools）</h3>
+            <div class="muted">业务操作（订单查询、工单创建等）通过类型化接口受控调用，降低误操作风险。</div>
+          </div>
+          <div class="card">
+            <h3>知识库引用与溯源</h3>
+            <div class="muted">基于企业知识库的回答带可追溯引用，支持证据来源的审计与回溯。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="screenshot">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">示例界面（占位）</div>
+        <div class="screen">这里可以放 v0.1 的 UI 截图 / GIF</div>
+      </div>
+    </div>
+
+    <section style="margin-top:28px">
+      <div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+        <div style="flex:1;min-width:260px">
+          <h3 style="margin:0 0 8px 0">快速开始</h3>
+          <div class="muted" style="margin-bottom:8px">在本地以 Mock 模式运行后端（Go 环境）</div>
+          <pre style="background:#071827;padding:12px;border-radius:8px;color:#bfeee5;overflow:auto">
+git clone https://github.com/Keviniscool-boy/supportflow.git
+cd supportflow
+export SUPPORTFLOW_ENV=development
+export SUPPORTFLOW_MODEL_MODE=mock
+go run ./cmd/server
+# 打开 http://localhost:8080 查看 demo 接口
+          </pre>
+        </div>
+
+        <div style="width:320px;min-width:220px">
+          <h3 style="margin:0 0 8px 0">适合谁使用</h3>
+          <div class="muted">客服平台工程师、知识运营负责人、SRE/DevOps、想搭建自托管智能客服的公司或团队。</div>
+
+          <h3 style="margin:14px 0 8px 0">项目状态</h3>
+          <div class="muted">PRD &amp; 技术架构已完成，后端骨架可本地运行。v0.2 目标：提供一键自托管 Demo。</div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      © SupportFlow — 开源 · Apache‑2.0 • 在 GitHub 上查看： <a style="color:var(--accent)" href="https://github.com/Keviniscool-boy/supportflow">Keviniscool-boy/supportflow</a>
+    </footer>
+  </div>
+</body>
+</html>
